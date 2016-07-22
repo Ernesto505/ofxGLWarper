@@ -36,13 +36,13 @@ public:
 		
 	void mouseDragged(ofMouseEventArgs &args);
 	void mousePressed(ofMouseEventArgs &args);
-	void mouseReleased(ofMouseEventArgs &args){}
-    void mouseMoved(ofMouseEventArgs &args){}
-    void mouseScrolled(ofMouseEventArgs &args){}
-    void mouseEntered(ofMouseEventArgs &args){}
-    void mouseExited(ofMouseEventArgs &args){}
+	void mouseReleased(ofMouseEventArgs &args);
+	void mouseMoved(ofMouseEventArgs &args);
+    void mouseScrolled(ofMouseEventArgs &args);
+    void mouseEntered(ofMouseEventArgs &args);
+    void mouseExited(ofMouseEventArgs &args);
     void keyPressed(ofKeyEventArgs &args);
-    void keyReleased(ofKeyEventArgs &args){}
+    void keyReleased(ofKeyEventArgs &args);
     
 	void processMatrices();
 	
@@ -73,14 +73,14 @@ public:
     
     ofEvent<CornerLocation> changeEvent;
 
-private:
+protected:
 	int x, y;
 	int  width; //width of the quad to work with
 	int	 height; // height of the quad to work with
 	bool active;
 	ofPoint corners[4];
 	int whichCorner;
-    ofMatrix4x4 myMatrix;
+	GLfloat myMatrix[16];
     float cornerSensibility;
     bool cornerSelected;
     bool bUseKeys;

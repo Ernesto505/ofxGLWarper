@@ -1,6 +1,6 @@
 #include "ofxGLWarper.h"
 #include "stdio.h"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "cv.h"
 
 
 //--------------------------------------------------------------
@@ -13,9 +13,21 @@ void ofxGLWarper::setup(int _resX, int _resY){
 }
 //--------------------------------------------------------------
 void ofxGLWarper::setup(int _x, int _y, int _w, int _h){
-    ofLogVerbose() << "ofxGLWarper setup: " <<_x << " " <<_y << " " <<_w << " " <<_h << endl;
+    cout << "ofxGLWarper setup: " <<_x << " " <<_y << " " <<_w << " " <<_h << endl;
 	ofUnregisterMouseEvents(this);
-
+	/*
+	corners[0].x = 0.0;
+	corners[0].y = 0.0;
+	
+	corners[1].x = 1.0;
+	corners[1].y = 0.0;
+	
+	corners[2].x = 1.0;
+	corners[2].y = 1.0;
+	
+	corners[3].x = 0.0;
+	corners[3].y = 1.0;
+	//*/
     corners[0].x = _x;
 	corners[0].y = _y;
 	
@@ -29,8 +41,12 @@ void ofxGLWarper::setup(int _x, int _y, int _w, int _h){
 	corners[3].y = _y + _h;
     
 	active=false;
-
-    myMatrix = ofMatrix4x4(); // identity
+	
+	for(int i = 0; i < 16; i++)
+	{
+		if(i % 5 != 0) myMatrix[i] = 0.0;
+		else myMatrix[i] = 1.0;
+	}
 	x=_x;
 	y=_y;
 	width=_w;
@@ -64,14 +80,15 @@ void ofxGLWarper::deactivate(){
 void ofxGLWarper::toogleActive(){
     if(!active){
         activate();
-        ofLogVerbose() << "activate"<<endl;
+        cout << "activate"<<endl;
     }else{
         deactivate();
-        ofLogVerbose() << "desactivate"<<endl;
+        cout << "desactivate"<<endl;
     }
 }
 //--------------------------------------------------------------
 void ofxGLWarper::enableKeys(bool k){
+//    bUseKeys=k;
     if (k) {
         ofRegisterKeyEvents(this);
     }else{
@@ -94,7 +111,10 @@ void ofxGLWarper::setUseKeys(bool use){
 void ofxGLWarper::processMatrices(){
 	//we set it to the default - 0 translation
 	//and 1.0 scale for x y z and w
-    myMatrix = ofMatrix4x4(); // default constructor generates identity
+	for(int i = 0; i < 16; i++){
+		if(i % 5 != 0) myMatrix[i] = 0.0;
+		else myMatrix[i] = 1.0;
+	}
 	
 	//we need our points as opencv points
 	//be nice to do this without opencv?
@@ -164,20 +184,22 @@ void ofxGLWarper::processMatrices(){
 	// ie:   [0][3][ ][6]
 	//       [1][4][ ][7]
 	//		 [ ][ ][ ][ ]
-	//       [2][5][ ][8]
+	//       [2][5][ ][9]
 	//       
-
-        myMatrix(0,0) = matrix[0];
-        myMatrix(1,0) = matrix[1];
-        myMatrix(3,0) = matrix[2];
-
-        myMatrix(0,1) = matrix[3];
-        myMatrix(1,1) = matrix[4];
-        myMatrix(3,1) = matrix[5];
-
-        myMatrix(0,3) = matrix[6];
-        myMatrix(1,3) = matrix[7];
-        myMatrix(3,3) = matrix[8];
+	
+	myMatrix[0]		= matrix[0];
+	myMatrix[4]		= matrix[1];
+	myMatrix[12]	= matrix[2];
+	
+	myMatrix[1]		= matrix[3];
+	myMatrix[5]		= matrix[4];
+	myMatrix[13]	= matrix[5];	
+	
+	myMatrix[3]		= matrix[6];
+	myMatrix[7]		= matrix[7];
+	myMatrix[15]	= matrix[8];	
+	
+	
 }
 //--------------------------------------------------------------
 void ofxGLWarper::draw(){
@@ -195,7 +217,7 @@ void ofxGLWarper::begin(){
 		processMatrices();
 	}
 	ofPushMatrix();
-	ofMultMatrix(myMatrix); 
+	ofMultMatrix(myMatrix);
 }
 //--------------------------------------------------------------
 void ofxGLWarper::end(){
@@ -218,7 +240,19 @@ void ofxGLWarper::end(){
 void ofxGLWarper::save(string saveFile){
 	ofxXmlSettings XML;
 	saveToXml(XML);
-    XML.saveFile(saveFile);
+    /*
+    XML.clear();
+	XML.addTag("corners");
+	XML.pushTag("corners");
+	
+	
+	for(int i =0; i<4; i++){
+		int t = XML.addTag("corner");
+		XML.setValue("corner:x",corners[i].x, t);
+		XML.setValue("corner:y",corners[i].y, t);
+	}
+    //*/
+	XML.saveFile(saveFile);
 }
 //--------------------------------------------------------------
 void ofxGLWarper::saveToXml(ofxXmlSettings &XML){
@@ -240,6 +274,29 @@ void ofxGLWarper::load(string loadFile){
         return;
 	}
     loadFromXml(XML);
+	/*
+	if(!XML.tagExists("corners")){
+		ofLog(OF_LOG_ERROR, "ofxGLWarper : incorrrect xml formating. No \"corners\" tag found");
+		return;
+	}
+	XML.pushTag("corners");
+	if (XML.getNumTags("corner")<4 ) {
+		ofLog(OF_LOG_ERROR, "ofxGLWarper : incorrrect xml formating. less than 4 \"corner\" tags found");
+		return;	
+	}
+	for(int i =0; i<4; i++){
+		int t = XML.addTag("corner");
+		XML.pushTag("corner", i);
+		if (XML.tagExists("x") && XML.tagExists("y")){
+			corners[i].x = XML.getValue("x", double(1.0));
+			corners[i].y = XML.getValue("y", double(1.0));
+		}
+		XML.popTag();
+	}
+	
+	processMatrices();
+	ofLog(OF_LOG_WARNING, "ofxGLWarper : xml file loaded OK!.");
+	//*/
 }
 
 //--------------------------------------------------------------
@@ -269,7 +326,13 @@ void ofxGLWarper::loadFromXml(ofxXmlSettings &XML){
 }
 //--------------------------------------------------------------
 void ofxGLWarper::mouseDragged(ofMouseEventArgs &args){
+
+	//float scaleX = (float)args.x / width;
+	//float scaleY = (float)args.y / height;
+	
 	if(whichCorner >= 0 && cornerSelected){
+	//	corners[whichCorner].x = scaleX;
+	//	corners[whichCorner].y = scaleY;
         corners[whichCorner].x = args.x;
 		corners[whichCorner].y = args.y;
 		
@@ -283,13 +346,15 @@ void ofxGLWarper::mousePressed(ofMouseEventArgs &args){
 	float smallestDist = sqrt(ofGetWidth() * ofGetWidth() + ofGetHeight() * ofGetHeight());
 	//whichCorner = -1;
 	float sensFactor = cornerSensibility * sqrt( width  * width  + height  * height );
-
+   // cout << "sens factor " << sensFactor << endl;
     cornerSelected = false;
 	for(int i = 0; i < 4; i++){
 		float distx = corners[i].x - (float)args.x;
 		float disty = corners[i].y - (float)args.y;
+//      float distx = corners[i].x - (float)args.x/width;
+//		float disty = corners[i].y - (float)args.y/height;
 		float dist  = sqrt( distx * distx + disty * disty);
-		ofLogVerbose() << "mouse to corner dist: " << dist << endl;
+		cout << "mouse to corner dist: " << dist << endl;
 		if(dist < smallestDist && dist < sensFactor ){
 			whichCorner = i;
 			smallestDist = dist;
@@ -297,6 +362,19 @@ void ofxGLWarper::mousePressed(ofMouseEventArgs &args){
 		}
 	}
 }
+//--------------------------------------------------------------
+void ofxGLWarper::mouseReleased(ofMouseEventArgs &args){
+	//whichCorner = -1;
+}
+//--------------------------------------------------------------
+void ofxGLWarper::mouseMoved(ofMouseEventArgs &args){
+}
+//--------------------------------------------------------------
+void ofxGLWarper::mouseScrolled(ofMouseEventArgs &args){}
+//--------------------------------------------------------------
+void ofxGLWarper::mouseEntered(ofMouseEventArgs &args){}
+//--------------------------------------------------------------
+void ofxGLWarper::mouseExited(ofMouseEventArgs &args){}
 
 //--------------------------------------------------------------
 void ofxGLWarper::keyPressed(ofKeyEventArgs &args){
@@ -320,6 +398,8 @@ void ofxGLWarper::keyPressed(ofKeyEventArgs &args){
     }
 }
 //--------------------------------------------------------------
+void ofxGLWarper::keyReleased(ofKeyEventArgs &args){}
+//--------------------------------------------------------------
 ofVec4f ofxGLWarper::fromScreenToWarpCoord(float x, float y, float z){
 	ofVec4f mousePoint;
 	ofVec4f warpedPoint;
@@ -331,8 +411,10 @@ ofVec4f ofxGLWarper::fromScreenToWarpCoord(float x, float y, float z){
 	mousePoint.w = 1.0;
 	
 	// i create a ofMatrix4x4 with the ofxGLWarper myMatrixData in column order
-	ofMatrix4x4 myOFmatrix = ofMatrix4x4::getTransposedOf(myMatrix);
-
+	ofMatrix4x4 myOFmatrix = ofMatrix4x4(myMatrix[0], myMatrix[4],myMatrix[8],myMatrix[12],
+										 myMatrix[1], myMatrix[5],myMatrix[9], myMatrix[13],
+										 myMatrix[2], myMatrix[6],myMatrix[10],myMatrix[14],
+										 myMatrix[3],myMatrix[7],myMatrix[11],myMatrix[15]);
 	// do not invert the matrix 
 	ofMatrix4x4 invertedMyMatrix = myOFmatrix.getInverse();	
 	//ofMatrix4x4 invertedMyMatrix = myOFmatrix;
@@ -359,8 +441,10 @@ ofVec4f ofxGLWarper::fromWarpToScreenCoord(float x, float y, float z){
 	mousePoint.w = 1.0;
 	
 	// i create a ofMatrix4x4 with the ofxGLWarper myMatrixData in column order
-	ofMatrix4x4 myOFmatrix = ofMatrix4x4::getTransposedOf(myMatrix);
-
+	ofMatrix4x4 myOFmatrix = ofMatrix4x4(myMatrix[0], myMatrix[4],myMatrix[8],myMatrix[12],
+										 myMatrix[1], myMatrix[5],myMatrix[9], myMatrix[13],
+										 myMatrix[2], myMatrix[6],myMatrix[10],myMatrix[14],
+										 myMatrix[3],myMatrix[7],myMatrix[11],myMatrix[15]);
 	// invert the matrix 
 	//ofMatrix4x4 invertedMyMatrix = myOFmatrix.getInverse();	
 	ofMatrix4x4 invertedMyMatrix = myOFmatrix;
