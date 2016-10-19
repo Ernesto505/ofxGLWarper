@@ -78,7 +78,8 @@ protected:
 	int  width; //width of the quad to work with
 	int	 height; // height of the quad to work with
 	bool active;
-	ofPoint corners[4];
+	ofPoint relativeCorners[4];
+	ofPoint windowCorners[4];
 	int whichCorner;
 	GLfloat myMatrix[16];
     float cornerSensibility;

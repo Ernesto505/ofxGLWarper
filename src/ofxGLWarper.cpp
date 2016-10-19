@@ -15,30 +15,45 @@ void ofxGLWarper::setup(int _resX, int _resY){
 void ofxGLWarper::setup(int _x, int _y, int _w, int _h){
     cout << "ofxGLWarper setup: " <<_x << " " <<_y << " " <<_w << " " <<_h << endl;
 	ofUnregisterMouseEvents(this);
-	/*
-	corners[0].x = 0.0;
-	corners[0].y = 0.0;
 	
-	corners[1].x = 1.0;
-	corners[1].y = 0.0;
+	relativeCorners[0].x = 0.0;
+	relativeCorners[0].y = 0.0;
 	
-	corners[2].x = 1.0;
-	corners[2].y = 1.0;
+	relativeCorners[1].x = 0.0;
+	relativeCorners[1].y = 0.0;
 	
-	corners[3].x = 0.0;
-	corners[3].y = 1.0;
-	//*/
-    corners[0].x = _x;
-	corners[0].y = _y;
+	relativeCorners[2].x = 0.0;
+	relativeCorners[2].y = 0.0;
 	
-	corners[1].x = _x + _w;
-	corners[1].y = _y;
+	relativeCorners[3].x = 0.0;
+	relativeCorners[3].y = 0.0;
 	
-	corners[2].x = _x + _w;
-	corners[2].y = _y + _h;
+	//
 	
-	corners[3].x = _x;
-	corners[3].y = _y + _h;
+	windowCorners[0].x = _x;
+	windowCorners[0].y = _y;
+
+	windowCorners[1].x = _x + _w;
+	windowCorners[1].y = _y;
+
+	windowCorners[2].x = _x + _w;
+	windowCorners[2].y = _y + _h;
+
+	windowCorners[3].x = _x;
+	windowCorners[3].y = _y + _h;
+
+
+ //   corners[0].x = _x;
+	//corners[0].y = _y;
+	//
+	//corners[1].x = _x + _w;
+	//corners[1].y = _y;
+	//
+	//corners[2].x = _x + _w;
+	//corners[2].y = _y + _h;
+	//
+	//corners[3].x = _x;
+	//corners[3].y = _y + _h;
     
 	active=false;
 	
@@ -137,8 +152,8 @@ void ofxGLWarper::processMatrices(){
 	for(int i = 0; i < 4; i++){
 		//cvdst[i].x = corners[i].x  * (float)width;
 		//cvdst[i].y = corners[i].y * (float)height;
-        cvdst[i].x = corners[i].x;
-		cvdst[i].y = corners[i].y;
+        cvdst[i].x = relativeCorners[i].x + windowCorners[i].x;
+		cvdst[i].y = relativeCorners[i].y + windowCorners[i].y;
 	}
 	
 	//we create a matrix that will store the results
@@ -231,7 +246,7 @@ void ofxGLWarper::end(){
             }else{
                 ofSetColor(255, 255, 0);
             }
-            ofDrawRectangle(corners[i], 10, 10);
+            ofDrawRectangle(relativeCorners[i]+windowCorners[i], 10, 10);
         }
         ofPopStyle();
     }
@@ -261,8 +276,8 @@ void ofxGLWarper::saveToXml(ofxXmlSettings &XML){
 	XML.pushTag("corners");
 	for(int i =0; i<4; i++){
 		int t = XML.addTag("corner");
-		XML.setValue("corner:x",corners[i].x, t);
-		XML.setValue("corner:y",corners[i].y, t);
+		XML.setValue("corner:x",relativeCorners[i].x, t);
+		XML.setValue("corner:y",relativeCorners[i].y, t);
 	}
 	XML.popTag();
 }
@@ -314,8 +329,8 @@ void ofxGLWarper::loadFromXml(ofxXmlSettings &XML){
 		int t = XML.addTag("corner");
 		XML.pushTag("corner", i);
 		if (XML.tagExists("x") && XML.tagExists("y")){
-			corners[i].x = XML.getValue("x", double(1.0));
-			corners[i].y = XML.getValue("y", double(1.0));
+			relativeCorners[i].x = XML.getValue("x", double(1.0));
+			relativeCorners[i].y = XML.getValue("y", double(1.0));
 		}
 		XML.popTag();
 	}
@@ -333,8 +348,8 @@ void ofxGLWarper::mouseDragged(ofMouseEventArgs &args){
 	if(whichCorner >= 0 && cornerSelected){
 	//	corners[whichCorner].x = scaleX;
 	//	corners[whichCorner].y = scaleY;
-        corners[whichCorner].x = args.x;
-		corners[whichCorner].y = args.y;
+        relativeCorners[whichCorner].x = args.x - windowCorners[whichCorner].x;
+		relativeCorners[whichCorner].y = args.y - windowCorners[whichCorner].y;
 		
         CornerLocation location = (CornerLocation)whichCorner;
         ofNotifyEvent(changeEvent, location, this);
@@ -349,8 +364,8 @@ void ofxGLWarper::mousePressed(ofMouseEventArgs &args){
    // cout << "sens factor " << sensFactor << endl;
     cornerSelected = false;
 	for(int i = 0; i < 4; i++){
-		float distx = corners[i].x - (float)args.x;
-		float disty = corners[i].y - (float)args.y;
+		float distx = relativeCorners[i].x - (float)args.x - windowCorners[i].x;
+		float disty = relativeCorners[i].y - (float)args.y - windowCorners[i].y;
 //      float distx = corners[i].x - (float)args.x/width;
 //		float disty = corners[i].y - (float)args.y/height;
 		float dist  = sqrt( distx * distx + disty * disty);
@@ -381,16 +396,16 @@ void ofxGLWarper::keyPressed(ofKeyEventArgs &args){
         switch (args.key) {
                 if (whichCorner>=0 && cornerSelected) {
             case OF_KEY_DOWN:
-                corners[whichCorner].y++;
+                relativeCorners[whichCorner].y++;
                 break;
             case OF_KEY_UP:
-                corners[whichCorner].y--;
+				relativeCorners[whichCorner].y--;
                 break;
             case OF_KEY_LEFT:
-                corners[whichCorner].x--;
+				relativeCorners[whichCorner].x--;
                 break;
             case OF_KEY_RIGHT:
-                corners[whichCorner].x++;            
+				relativeCorners[whichCorner].x++;
                 break;
                 }
             default:
@@ -460,7 +475,7 @@ ofVec4f ofxGLWarper::fromWarpToScreenCoord(float x, float y, float z){
 }
 //--------------------------------------------------------------
 void ofxGLWarper::setCorner(CornerLocation cornerLocation, ofPoint screenLocation){
-    corners[cornerLocation] = screenLocation;// / ofPoint(width, height, 1);
+    relativeCorners[cornerLocation] = screenLocation; // / ofPoint(width, height, 1);
     processMatrices();
 
     CornerLocation location = cornerLocation;
@@ -468,7 +483,7 @@ void ofxGLWarper::setCorner(CornerLocation cornerLocation, ofPoint screenLocatio
 }
 //--------------------------------------------------------------
 ofPoint ofxGLWarper::getCorner(CornerLocation cornerLocation){
-    return corners[cornerLocation];// * ofPoint(width, height, 1);
+    return relativeCorners[cornerLocation];// * ofPoint(width, height, 1);
 }
 //--------------------------------------------------------------
 void ofxGLWarper::setCornerSensibility(float sensibility){
